@@ -2,16 +2,6 @@ open StdLabels
 open MoreLabels
 module StringMap = Map.Make (String)
 
-let is_vowel = function
-  | 'a' | 'e' | 'i' | 'o' | 'u' -> true
-  | _ -> false
-
-let is_forbidden = function
-  | 'a', 'b' | 'c', 'd' | 'p', 'q' | 'x', 'y' -> true
-  | _ -> false
-
-let result vowels repeated_letters = vowels >= 3 && repeated_letters
-
 let rec has_overlap = function
   | [] | [ _ ] -> false
   | (_, end1) :: ((start2, _) :: _ as tl) ->
