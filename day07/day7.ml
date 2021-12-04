@@ -2,7 +2,14 @@ open StdLabels
 open MoreLabels
 module StringMap = Map.Make (String)
 
-type operator = And | Or | Lshift | Rshift
+type operator = Int16.t -> Int16.t -> Int16.t
+
+let parse_operator = function
+  | "AND" -> Some Int16.b_and
+  | "OR" -> Some Int16.b_or
+  | "LSHIFT" -> Some Int16.lshift
+  | "RSHIFT" -> Some Int16.rshift
+  | _ -> None
 
 type operation =
   | Int of Int16.t
@@ -21,19 +28,6 @@ let is_alpha =
   String.for_all ~f:is_alpha
 
 let parse_value v = if is_alpha v then Var v else Int (Int16.of_string v)
-
-let parse_operator = function
-  | "AND" -> Some And
-  | "OR" -> Some Or
-  | "LSHIFT" -> Some Lshift
-  | "RSHIFT" -> Some Rshift
-  | _ -> None
-
-let fn_of_operator = function
-  | And -> Int16.b_and
-  | Or -> Int16.b_or
-  | Lshift -> Int16.lshift
-  | Rshift -> Int16.rshift
 
 let parse_operation op =
   match String.split_on_char ~sep:' ' op with
@@ -64,9 +58,7 @@ let rec eval resolved = function
   | Not op -> op |> eval resolved |> Option.map Int16.not
   | Bin_op (operator, lhs, rhs) -> (
       match (eval resolved lhs, eval resolved rhs) with
-      | Some lhs, Some rhs ->
-          let fn = fn_of_operator operator in
-          Some (fn lhs rhs)
+      | Some lhs, Some rhs -> Some (operator lhs rhs)
       | _ -> None)
 
 let execute ~key ~data { resolved; pending } =
