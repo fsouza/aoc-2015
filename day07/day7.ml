@@ -82,17 +82,29 @@ let rec process ({ pending; _ } as state) =
   if StringMap.is_empty pending then state
   else pending |> StringMap.fold ~init:state ~f:execute |> process
 
+let solve state =
+  state |> process |> fun { resolved; _ } -> StringMap.find "a" resolved
+
 let () =
-  Aoc.stdin
-  |> Seq.filter_map parse
-  |> Seq.fold_left
-       (fun ({ pending; _ } as state) { target; operation } ->
-         {
-           state with
-           pending = StringMap.add ~key:target ~data:operation pending;
-         })
-       { pending = StringMap.empty; resolved = StringMap.empty }
-  |> process
-  |> (fun { resolved; _ } -> StringMap.find "a" resolved)
-  |> Int16.to_string
-  |> print_endline
+  let initial_state =
+    Aoc.stdin
+    |> Seq.filter_map parse
+    |> Seq.fold_left
+         (fun ({ pending; _ } as state) { target; operation } ->
+           {
+             state with
+             pending = StringMap.add ~key:target ~data:operation pending;
+           })
+         { pending = StringMap.empty; resolved = StringMap.empty }
+  in
+  let solution_part1 = solve initial_state in
+  let state_part2 =
+    {
+      pending = StringMap.remove "b" initial_state.pending;
+      resolved =
+        StringMap.add ~key:"b" ~data:solution_part1 initial_state.resolved;
+    }
+  in
+  let solution_part2 = solve state_part2 in
+  Printf.printf "Part 1: %s\n" (Int16.to_string solution_part1);
+  Printf.printf "Part 2: %s\n" (Int16.to_string solution_part2)

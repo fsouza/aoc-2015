@@ -1,7 +1,7 @@
 (executable
- (name part1)
+ (name day7)
  (libraries aoc int16 str)
- (modules Part1))
+ (modules Day7))
 
 (library
  (name int16)
