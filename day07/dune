@@ -1,0 +1,8 @@
+(executable
+ (name part1)
+ (libraries aoc int16 str)
+ (modules Part1))
+
+(library
+ (name int16)
+ (modules Int16))
