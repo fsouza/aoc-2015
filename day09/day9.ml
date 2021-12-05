@@ -35,30 +35,37 @@ let add_entry map (origin, destination, distance) =
 
 let keys map = map |> StringMap.to_seq |> Seq.map fst |> StringSet.of_seq
 
-let shortest_starting_at map key =
-  let rec path acc key to_visit =
-    if StringSet.is_empty to_visit then acc
-    else
-      map
-      |> StringMap.find key
-      |> List.filter ~f:(fun (dst, _) -> StringSet.mem dst to_visit)
-      |> List.map ~f:(fun (destination, distance) ->
-             path (acc + distance) destination
-               (StringSet.remove destination to_visit))
-      |> List.fold_left ~init:max_int ~f:min
+let find_answer ~fold_init ~fold_f map =
+  let find_answer' map key =
+    let rec path acc key to_visit =
+      if StringSet.is_empty to_visit then acc
+      else
+        map
+        |> StringMap.find key
+        |> List.filter ~f:(fun (dst, _) -> StringSet.mem dst to_visit)
+        |> List.map ~f:(fun (destination, distance) ->
+               path (acc + distance) destination
+                 (StringSet.remove destination to_visit))
+        |> List.fold_left ~init:fold_init ~f:fold_f
+    in
+    path 0 key (map |> keys |> StringSet.remove key)
   in
-  path 0 key (map |> keys |> StringSet.remove key)
 
-let find_shortest map =
-  StringMap.fold ~init:max_int
+  StringMap.fold ~init:fold_init
     ~f:(fun ~key ~data:_ acc ->
-      let shortest = shortest_starting_at map key in
-      min acc shortest)
+      let shortest = find_answer' map key in
+      fold_f acc shortest)
     map
 
+let find_shortest = find_answer ~fold_init:max_int ~fold_f:min
+
+let find_longest = find_answer ~fold_init:0 ~fold_f:max
+
 let () =
-  Aoc.stdin
-  |> Seq.filter_map parse_line
-  |> Seq.fold_left add_entry StringMap.empty
-  |> find_shortest
-  |> Printf.printf "%d\n"
+  let map =
+    Aoc.stdin
+    |> Seq.filter_map parse_line
+    |> Seq.fold_left add_entry StringMap.empty
+  in
+  Printf.printf "Part 1 (shortest): %d\n" (find_shortest map);
+  Printf.printf "Part 2 (longest): %d\n" (find_longest map)
