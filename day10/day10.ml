@@ -24,9 +24,10 @@ let rec take n seq () =
     | Cons (v, seq) -> Cons (v, take (n - 1) seq)
 
 let () =
+  let times = Sys.argv.(1) |> int_of_string in
   read_line ()
   |> look_and_say_seq
-  |> take 50
+  |> take times
   |> Seq.fold_left (fun _ el -> el) ""
   |> String.length
   |> Printf.printf "%d\n"
