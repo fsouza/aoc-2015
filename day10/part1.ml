@@ -26,7 +26,7 @@ let rec take n seq () =
 let () =
   read_line ()
   |> look_and_say_seq
-  |> take 40
+  |> take 50
   |> Seq.fold_left (fun _ el -> el) ""
   |> String.length
   |> Printf.printf "%d\n"
