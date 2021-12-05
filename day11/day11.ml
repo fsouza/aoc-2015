@@ -60,4 +60,8 @@ let next password =
   in
   next' (password |> String.to_seq |> Array.of_seq)
 
-let () = read_line () |> next |> print_endline
+let () =
+  let part1 = read_line () |> next in
+  let part2 = next part1 in
+  Printf.printf "Part 1: %s\n" part1;
+  Printf.printf "Part 2: %s\n" part2
