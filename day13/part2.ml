@@ -49,7 +49,7 @@ let add_me map =
        ~f:(fun ~key ~data map ->
          if key != "me" then StringMap.add ~key ~data:(("me", 0) :: data) map
          else StringMap.add ~key ~data map)
-       ~init:map
+       ~init:StringMap.empty
 
 let find_amount map orig dest =
   map
