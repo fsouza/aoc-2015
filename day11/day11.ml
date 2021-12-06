@@ -37,7 +37,7 @@ let incr_ch ch =
   else
     let delta =
       match ch with
-      | 'i' | 'o' | 'l' -> 2
+      | 'h' | 'n' | 'k' -> 2
       | _ -> 1
     in
     (ch |> Char.code |> ( + ) delta |> Char.chr, false)
