@@ -10,9 +10,7 @@ module PosMap = Map.Make (struct
 end)
 
 type pos = int * int
-
 type range = pos * pos
-
 type operation = Toggle of range | Turn_on of range | Turn_off of range
 
 let all_positions ((start_row, start_col), (end_row, end_col)) =

@@ -58,7 +58,6 @@ let find_answer ~fold_init ~fold_f map =
     map
 
 let find_shortest = find_answer ~fold_init:max_int ~fold_f:min
-
 let find_longest = find_answer ~fold_init:0 ~fold_f:max
 
 let () =
