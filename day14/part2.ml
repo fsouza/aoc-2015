@@ -60,16 +60,18 @@ let proc_reindeer ts
   | Resting_until _ -> { reindeer with state = Flying_until (ts + time_flying) }
 
 let add_score reindeers =
-  let leader_idx, _ =
-    reindeers
-    |> Array.to_seqi
-    |> Seq.fold_left
-         (fun ((_, leader) as acc) (i, { distance_traveled; _ }) ->
-           if distance_traveled > leader then (i, distance_traveled) else acc)
-         (-1, 0)
-  in
-  let ({ score; _ } as leader) = reindeers.(leader_idx) in
-  reindeers.(leader_idx) <- { leader with score = score + 1 }
+  reindeers
+  |> Array.to_seqi
+  |> Seq.fold_left
+       (fun ((indices, leader) as acc) (i, { distance_traveled; _ }) ->
+         if distance_traveled > leader then ([ i ], distance_traveled)
+         else if distance_traveled < leader then acc
+         else (i :: indices, distance_traveled))
+       ([], 0)
+  |> fst
+  |> List.iter ~f:(fun leader_idx ->
+         let ({ score; _ } as leader) = reindeers.(leader_idx) in
+         reindeers.(leader_idx) <- { leader with score = score + 1 })
 
 let run until reindeers =
   let rec run' ts =
@@ -87,13 +89,9 @@ let run until reindeers =
   in
   run' 1
 
-let print_scores =
-  Array.iter ~f:(fun { name; score; distance_traveled; _ } ->
-      Printf.printf "Name: %s\tScore: %d\tDistance: %d\n" name score
-        distance_traveled)
-
 let () =
-  let reindeers = Aoc.stdin |> Seq.filter_map parse |> Array.of_seq in
-  let answer = reindeers |> run 2503 in
-  print_scores reindeers;
-  answer |> Printf.printf "%d\n"
+  Aoc.stdin
+  |> Seq.filter_map parse
+  |> Array.of_seq
+  |> run 2503
+  |> Printf.printf "%d\n"
