@@ -42,7 +42,7 @@ perfumes: 1
   |> Seq.filter_map parse_fact
   |> StringMap.of_seq
 
-let cmp_fn = function
+let cmp_fn_part2 = function
   | "cat" | "trees" -> ( > )
   | "pomeranians" | "goldfish" -> ( < )
   | _ -> ( = )
@@ -51,7 +51,7 @@ let all_sues =
   StringMap.fold ~init:IntSet.empty ~f:(fun ~key:_ ~data set ->
       data |> List.to_seq |> Seq.map fst |> (Fun.flip IntSet.add_seq) set)
 
-let find_sue map =
+let find_sue cmp_fn map =
   StringMap.fold ~init:(all_sues map)
     ~f:(fun ~key ~data set ->
       let cmp_fn = cmp_fn key in
@@ -70,17 +70,21 @@ let find_sue map =
   |> IntSet.min_elt
 
 let () =
-  Aoc.stdin
-  |> Seq.filter_map parse
-  |> Seq.fold_left
-       (fun map (sue_number, facts) ->
-         List.fold_left ~init:map
-           ~f:(fun map (compound, count) ->
-             let curr =
-               StringMap.find_opt compound map |> Option.value ~default:[]
-             in
-             StringMap.add ~key:compound ~data:((sue_number, count) :: curr) map)
-           facts)
-       StringMap.empty
-  |> find_sue
-  |> Printf.printf "%d\n"
+  let sue_map =
+    Aoc.stdin
+    |> Seq.filter_map parse
+    |> Seq.fold_left
+         (fun map (sue_number, facts) ->
+           List.fold_left ~init:map
+             ~f:(fun map (compound, count) ->
+               let curr =
+                 StringMap.find_opt compound map |> Option.value ~default:[]
+               in
+               StringMap.add ~key:compound
+                 ~data:((sue_number, count) :: curr)
+                 map)
+             facts)
+         StringMap.empty
+  in
+  Printf.printf "Part 1: %d\n" (find_sue (Fun.const ( = )) sue_map);
+  Printf.printf "Part 2: %d\n" (find_sue cmp_fn_part2 sue_map)
