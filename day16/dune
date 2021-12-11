@@ -1,0 +1,4 @@
+(executable
+ (name part1)
+ (libraries aoc re)
+ (modules Part1))
