@@ -54,6 +54,11 @@ let score ingredients =
 
 let recipe_score recipe = recipe |> Recipe.to_seq |> score
 
+let recipe_calories recipe =
+  recipe
+  |> Recipe.to_seq
+  |> Seq.fold_left (fun total ({ calories; _ }, n) -> total + (calories * n)) 0
+
 let make_recipe ingredients amounts =
   amounts
   |> List.map ~f:(fun amount -> if amount < 0 then 0 else amount)
@@ -64,7 +69,7 @@ let make_recipe ingredients amounts =
 (* Note: this hard codes the number of ingredients and runs a brute-force
    algorithm, we should do better, using some constraints solving library could
    be useful :) *)
-let run ingredients =
+let run calories_checker ingredients =
   let max = 100 in
   let largest = ref 0 in
   for first = 0 to max do
@@ -72,16 +77,16 @@ let run ingredients =
       for third = 0 to max - first - second do
         let fourth = max - first - second - third in
         let recipe = make_recipe ingredients [ first; second; third; fourth ] in
-        let score = recipe_score recipe in
-        if score > !largest then largest := score
+        let calories = recipe_calories recipe in
+        if calories_checker calories then
+          let score = recipe_score recipe in
+          if score > !largest then largest := score
       done
     done
   done;
   !largest
 
 let () =
-  Aoc.stdin
-  |> Seq.filter_map parse
-  |> List.of_seq
-  |> run
-  |> Printf.printf "%d\n"
+  let ingredients = Aoc.stdin |> Seq.filter_map parse |> List.of_seq in
+  Printf.printf "Part 1: %d\n" @@ run (Fun.const true) ingredients;
+  Printf.printf "Part 2: %d\n" @@ run (( = ) 500) ingredients
