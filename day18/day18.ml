@@ -38,10 +38,10 @@ let neighbors (row, col) n =
   |> List.filter ~f:(fun (row, col) ->
          row > -1 && row < n && col > -1 && col < n)
 
-let step { on = old_grid; n } =
+let step pinned { on = old_grid; n } =
   let rec step' to_visit visited new_grid =
     match to_visit with
-    | [] -> { n; on = new_grid }
+    | [] -> new_grid
     | pos :: rest when PosSet.mem pos visited -> step' rest visited new_grid
     | pos :: rest ->
         let is_on = PosSet.mem pos old_grid in
@@ -62,14 +62,29 @@ let step { on = old_grid; n } =
           step' to_visit visited (PosSet.add pos new_grid)
         else step' to_visit visited new_grid
   in
-  step' (PosSet.to_seq old_grid |> List.of_seq) PosSet.empty PosSet.empty
+  let new_grid =
+    step' (PosSet.to_seq old_grid |> List.of_seq) PosSet.empty pinned
+  in
+  { n; on = new_grid }
 
-let rec run steps grid = if steps = 0 then grid else run (steps - 1) (step grid)
+let rec run steps pinned grid =
+  let grid = { grid with on = PosSet.union grid.on pinned } in
+  if steps = 0 then grid else run (steps - 1) pinned (step pinned grid)
+
+let make_corners n =
+  [ (0, 0); (0, n - 1); (n - 1, 0); (n - 1, n - 1) ] |> PosSet.of_list
 
 let () =
   let steps = Sys.argv.(1) |> int_of_string in
-  Aoc.zip Aoc.nat Aoc.stdin
-  |> Seq.fold_left add_row_to_grid { n = 0; on = PosSet.empty }
-  |> run steps
+  let grid =
+    Aoc.zip Aoc.nat Aoc.stdin
+    |> Seq.fold_left add_row_to_grid { n = 0; on = PosSet.empty }
+  in
+  grid
+  |> run steps PosSet.empty
   |> (fun { on; _ } -> PosSet.cardinal on)
-  |> Printf.printf "%d\n"
+  |> Printf.printf "Part 1: %d\n";
+  grid
+  |> run steps (make_corners grid.n)
+  |> (fun { on; _ } -> PosSet.cardinal on)
+  |> Printf.printf "Part 2: %d\n"
