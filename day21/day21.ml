@@ -93,10 +93,27 @@ let print_player_more_details boss player =
   Printf.printf "Delta: %d\n" @@ delta_per_round player boss;
   Printf.printf "Cost: %d\n" @@ gold_spent player
 
+let part1 winners =
+  winners
+  |> List.map ~f:gold_spent
+  |> List.fold_left ~init:max_int ~f:min
+  |> Printf.printf "Part 1: %d\n"
+
+let part2 losers =
+  losers
+  |> List.map ~f:gold_spent
+  |> List.fold_left ~init:0 ~f:max
+  |> Printf.printf "Part 2: %d\n"
+
 let solve boss =
   all_players
-  |> Seq.filter (can_win_against boss)
-  |> Seq.map gold_spent
-  |> Seq.fold_left min max_int
+  |> Seq.fold_left
+       (fun (winners, losers) player ->
+         if can_win_against boss player then (player :: winners, losers)
+         else (winners, player :: losers))
+       ([], [])
 
-let () = Aoc.stdin |> parse_boss |> solve |> Printf.printf "%d\n"
+let () =
+  let winners, losers = Aoc.stdin |> parse_boss |> solve in
+  part1 winners;
+  part2 losers
