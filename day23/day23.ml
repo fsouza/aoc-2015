@@ -62,18 +62,19 @@ let execute { registers = (a_register, b_register) as registers; ip } = function
       let offset = if b_register = 1 then i else 1 in
       { registers; ip = ip + offset }
 
-let run_program instructions =
-  let rec run' ({ ip; _ } as state) =
-    if ip = Array.length instructions then state
-    else
-      let instruction = instructions.(ip) in
-      run' (execute state instruction)
-  in
-  run' initial_state
+let rec run ({ ip; _ } as state) instructions =
+  if ip = Array.length instructions then state
+  else
+    let instruction = instructions.(ip) in
+    run (execute state instruction) instructions
 
 let () =
-  Aoc.stdin
-  |> Seq.filter_map parse
-  |> Array.of_seq
-  |> run_program
-  |> fun { registers = a, b; _ } -> Printf.printf "a=%d, b=%d\n" a b
+  let instructions = Aoc.stdin |> Seq.filter_map parse |> Array.of_seq in
+  instructions
+  |> run initial_state
+  |> fun { registers = a, b; _ } ->
+  Printf.sprintf "a=%d, b=%d" a b |> Printf.printf "Part 1: %s\n";
+  instructions
+  |> run { initial_state with registers = (1, 0) }
+  |> fun { registers = a, b; _ } ->
+  Printf.sprintf "a=%d, b=%d" a b |> Printf.printf "Part 2: %s\n"
