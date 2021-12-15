@@ -73,8 +73,7 @@ let () =
   instructions
   |> run initial_state
   |> fun { registers = a, b; _ } ->
-  Printf.sprintf "a=%d, b=%d" a b |> Printf.printf "Part 1: %s\n";
+  Printf.printf "Part 1: a=%d, b=%d\n" a b;
   instructions
   |> run { initial_state with registers = (1, 0) }
-  |> fun { registers = a, b; _ } ->
-  Printf.sprintf "a=%d, b=%d" a b |> Printf.printf "Part 2: %s\n"
+  |> fun { registers = a, b; _ } -> Printf.printf "Part 2: a=%d, b=%d\n" a b
