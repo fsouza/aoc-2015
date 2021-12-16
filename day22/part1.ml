@@ -99,6 +99,13 @@ let attack attacker defender =
     (attacker, { defender with hp = defender.hp - damage })
   else (attacker, defender)
 
+(* this isn't great *)
+let smallest = ref max_int
+
+let record_and_return ({ mana_spent; id; _ } as winner) =
+  if id = "Player" && mana_spent < !smallest then smallest := mana_spent;
+  winner
+
 let rec play attacker defender =
   let attacker_effects =
     attacker.effects |> List.filter_map ~f:process_effect
@@ -117,10 +124,10 @@ let rec play attacker defender =
     |> List.fold_left ~init:(defender, attacker) ~f:apply_effect
   in
   let spells = available_spells all_spells attacker in
-  if lost attacker then defender
-  else if lost defender then attacker
+  if lost attacker then record_and_return defender
+  else if lost defender then record_and_return attacker
   else if attacker.id = "Player" && (not @@ has_enough_mana spells attacker)
-  then defender
+  then record_and_return defender
   else
     let attacker, defender = attack attacker defender in
     if lost defender then attacker
@@ -128,12 +135,15 @@ let rec play attacker defender =
       SpellSet.fold ~init:[]
         ~f:(fun spell acc ->
           let attacker, defender = cast (attacker, defender) spell in
-          play defender
-            {
-              attacker with
-              mana_spent = attacker.mana_spent + spell_cost spell;
-            }
-          :: acc)
+          let mana_spent = attacker.mana_spent + spell_cost spell in
+          if mana_spent > !smallest then acc
+          else
+            play defender
+              {
+                attacker with
+                mana_spent = attacker.mana_spent + spell_cost spell;
+              }
+            :: acc)
         spells
       |> List.filter ~f:(fun player -> player.id = "Player")
       |> List.fold_left ~init:{ initial_player with mana_spent = max_int }
