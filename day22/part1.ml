@@ -99,7 +99,7 @@ let attack attacker defender =
     (attacker, { defender with hp = defender.hp - damage })
   else (attacker, defender)
 
-let rec play attacker defender =
+let rec play ?(parallelize = true) attacker defender =
   let attacker_effects =
     attacker.effects |> List.filter_map ~f:process_effect
   in
@@ -125,21 +125,26 @@ let rec play attacker defender =
     let attacker, defender = attack attacker defender in
     if lost defender then attacker
     else if attacker.id = "Player" then
-      SpellSet.fold ~init:[]
-        ~f:(fun spell acc ->
-          let attacker, defender = cast (attacker, defender) spell in
-          play defender
-            {
-              attacker with
-              mana_spent = attacker.mana_spent + spell_cost spell;
-            }
-          :: acc)
-        spells
+      let spell_list = spells |> SpellSet.to_seq |> List.of_seq in
+      let folder spell acc =
+        let attacker, defender = cast (attacker, defender) spell in
+        play ~parallelize:false defender
+          { attacker with mana_spent = attacker.mana_spent + spell_cost spell }
+        :: acc
+      in
+      let winners =
+        if parallelize then Parmap.parfold folder (Parmap.L spell_list) [] ( @ )
+        else List.fold_left ~init:[] ~f:(Fun.flip folder) spell_list
+      in
+      winners
       |> List.filter ~f:(fun player -> player.id = "Player")
       |> List.fold_left ~init:{ initial_player with mana_spent = max_int }
            ~f:(fun acc player ->
              if player.mana_spent < acc.mana_spent then player else acc)
-    else play { defender with armor = 0 } { attacker with armor = 0 }
+    else
+      play ~parallelize:false
+        { defender with armor = 0 }
+        { attacker with armor = 0 }
 
 let play player boss =
   play player boss |> fun { mana_spent; _ } -> Printf.printf "%d\n" mana_spent

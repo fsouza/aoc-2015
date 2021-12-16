@@ -1,4 +1,4 @@
 (executable
  (name part1)
- (libraries aoc)
+ (libraries aoc parmap)
  (modules Part1))
