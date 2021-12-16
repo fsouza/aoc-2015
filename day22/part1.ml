@@ -2,10 +2,9 @@ open StdLabels
 open MoreLabels
 module IntSet = Set.Make (Int)
 
-type spell = Magic_missile | Drain | Shield | Poison | Recharge | No_spell
+type spell = Magic_missile | Drain | Shield | Poison | Recharge
 
 let spell_cost = function
-  | No_spell -> 0
   | Magic_missile -> 53
   | Drain -> 73
   | Shield -> 113
@@ -13,7 +12,6 @@ let spell_cost = function
   | Recharge -> 229
 
 let string_of_spell = function
-  | No_spell -> "no spell"
   | Magic_missile -> "Magic missile"
   | Drain -> "Drain"
   | Shield -> "Shield"
@@ -65,8 +63,8 @@ let initial_player =
     effects = [];
   }
 
-let cast (player, boss) = function
-  | No_spell -> (player, boss)
+let cast (player, boss) spell =
+  match spell with
   | Magic_missile -> (player, { boss with hp = boss.hp - 4 })
   | Drain -> ({ player with hp = player.hp + 2 }, { boss with hp = boss.hp - 2 })
   | Shield ->
@@ -95,23 +93,13 @@ let has_enough_mana spells { current_mana; _ } =
   let cheapest_spell = spells |> SpellSet.min_elt |> spell_cost in
   current_mana >= cheapest_spell
 
-let attack spells attacker defender =
-  if attacker.id = "Boss" then (
+let attack attacker defender =
+  if attacker.id = "Boss" then
     let damage = attacker.damage - defender.armor |> max 1 in
-    Printf.printf "Boss attacks for %d damage!\n" damage;
-    (attacker, { defender with hp = defender.hp - damage }, No_spell))
-  else
-    let spell =
-      SpellSet.find_last
-        ~f:(fun spell -> spell_cost spell <= attacker.current_mana)
-        spells
-    in
-    let attacker, defender = cast (attacker, defender) spell in
-    Printf.printf "Player casts %s.\n" @@ string_of_spell spell;
-    (attacker, defender, spell)
+    (attacker, { defender with hp = defender.hp - damage })
+  else (attacker, defender)
 
-let rec play spells attacker defender =
-  Printf.printf "-- %s turn --\n" attacker.id;
+let rec play attacker defender =
   let attacker_effects =
     attacker.effects |> List.filter_map ~f:process_effect
   in
@@ -120,10 +108,6 @@ let rec play spells attacker defender =
   in
   let attacker = { attacker with effects = attacker_effects } in
   let defender = { defender with effects = defender_effects } in
-  Printf.printf "- %s has %d hit points, %d armor, %d mana\n" attacker.id
-    attacker.hp attacker.armor attacker.current_mana;
-  Printf.printf "- %s has %d hit points, %d armor, %d mana\n" defender.id
-    defender.hp defender.armor defender.current_mana;
   let attacker, defender =
     attacker_effects
     |> List.fold_left ~init:(attacker, defender) ~f:apply_effect
@@ -132,28 +116,33 @@ let rec play spells attacker defender =
     defender_effects
     |> List.fold_left ~init:(defender, attacker) ~f:apply_effect
   in
-  let spells = available_spells spells attacker in
+  let spells = available_spells all_spells attacker in
   if lost attacker then defender
   else if lost defender then attacker
   else if attacker.id = "Player" && (not @@ has_enough_mana spells attacker)
   then defender
   else
-    let attacker, defender, spell_used = attack spells attacker defender in
-    let spell_cost = spell_cost spell_used in
+    let attacker, defender = attack attacker defender in
     if lost defender then attacker
-    else (
-      print_newline ();
-      play spells
-        { defender with armor = 0 }
-        {
-          attacker with
-          armor = 0;
-          mana_spent = attacker.mana_spent + spell_cost;
-          current_mana = attacker.current_mana - spell_cost;
-        })
+    else if attacker.id = "Player" then
+      SpellSet.fold ~init:[]
+        ~f:(fun spell acc ->
+          let attacker, defender = cast (attacker, defender) spell in
+          play defender
+            {
+              attacker with
+              mana_spent = attacker.mana_spent + spell_cost spell;
+            }
+          :: acc)
+        spells
+      |> List.filter ~f:(fun player -> player.id = "Player")
+      |> List.fold_left ~init:{ initial_player with mana_spent = max_int }
+           ~f:(fun acc player ->
+             if player.mana_spent < acc.mana_spent then player else acc)
+    else play { defender with armor = 0 } { attacker with armor = 0 }
 
 let play player boss =
-  play all_spells player boss |> fun { id; _ } -> Printf.printf "%s won!\n" id
+  play player boss |> fun { mana_spent; _ } -> Printf.printf "%d\n" mana_spent
 
 let parse_boss =
   Seq.fold_left
