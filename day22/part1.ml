@@ -135,13 +135,15 @@ let rec play attacker defender =
       SpellSet.fold ~init:[]
         ~f:(fun spell acc ->
           let attacker, defender = cast (attacker, defender) spell in
-          let mana_spent = attacker.mana_spent + spell_cost spell in
+          let spell_cost = spell_cost spell in
+          let mana_spent = attacker.mana_spent + spell_cost in
           if mana_spent > !smallest then acc
           else
             play defender
               {
                 attacker with
-                mana_spent = attacker.mana_spent + spell_cost spell;
+                mana_spent;
+                current_mana = attacker.current_mana - spell_cost;
               }
             :: acc)
         spells
