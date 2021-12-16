@@ -99,6 +99,10 @@ let attack attacker defender =
     (attacker, { defender with hp = defender.hp - damage })
   else (attacker, defender)
 
+let handle_level ~hard attacker =
+  if attacker.id = "Player" && hard then { attacker with hp = attacker.hp - 1 }
+  else attacker
+
 (* this isn't great *)
 let smallest = ref max_int
 
@@ -106,55 +110,63 @@ let record_and_return ({ mana_spent; id; _ } as winner) =
   if id = "Player" && mana_spent < !smallest then smallest := mana_spent;
   winner
 
-let rec play attacker defender =
-  let attacker_effects =
-    attacker.effects |> List.filter_map ~f:process_effect
-  in
-  let defender_effects =
-    defender.effects |> List.filter_map ~f:process_effect
-  in
-  let attacker = { attacker with effects = attacker_effects } in
-  let defender = { defender with effects = defender_effects } in
-  let attacker, defender =
-    attacker_effects
-    |> List.fold_left ~init:(attacker, defender) ~f:apply_effect
-  in
-  let defender, attacker =
-    defender_effects
-    |> List.fold_left ~init:(defender, attacker) ~f:apply_effect
-  in
-  let spells = available_spells all_spells attacker in
+let rec play ~hard attacker defender =
+  let attacker = handle_level ~hard attacker in
   if lost attacker then record_and_return defender
-  else if lost defender then record_and_return attacker
-  else if attacker.id = "Player" && (not @@ has_enough_mana spells attacker)
-  then record_and_return defender
   else
-    let attacker, defender = attack attacker defender in
-    if lost defender then attacker
-    else if attacker.id = "Player" then
-      SpellSet.fold ~init:[]
-        ~f:(fun spell acc ->
-          let attacker, defender = cast (attacker, defender) spell in
-          let spell_cost = spell_cost spell in
-          let mana_spent = attacker.mana_spent + spell_cost in
-          if mana_spent > !smallest then acc
-          else
-            play defender
-              {
-                attacker with
-                mana_spent;
-                current_mana = attacker.current_mana - spell_cost;
-              }
-            :: acc)
-        spells
-      |> List.filter ~f:(fun player -> player.id = "Player")
-      |> List.fold_left ~init:{ initial_player with mana_spent = max_int }
-           ~f:(fun acc player ->
-             if player.mana_spent < acc.mana_spent then player else acc)
-    else play { defender with armor = 0 } { attacker with armor = 0 }
+    let attacker_effects =
+      attacker.effects |> List.filter_map ~f:process_effect
+    in
+    let defender_effects =
+      defender.effects |> List.filter_map ~f:process_effect
+    in
+    let attacker = { attacker with effects = attacker_effects } in
+    let defender = { defender with effects = defender_effects } in
+    let attacker, defender =
+      attacker_effects
+      |> List.fold_left ~init:(attacker, defender) ~f:apply_effect
+    in
+    let defender, attacker =
+      defender_effects
+      |> List.fold_left ~init:(defender, attacker) ~f:apply_effect
+    in
+    let spells = available_spells all_spells attacker in
+    if lost attacker then record_and_return defender
+    else if lost defender then record_and_return attacker
+    else if attacker.id = "Player" && (not @@ has_enough_mana spells attacker)
+    then record_and_return defender
+    else
+      let attacker, defender = attack attacker defender in
+      if lost defender then record_and_return attacker
+      else if attacker.id = "Player" then
+        SpellSet.fold ~init:[]
+          ~f:(fun spell acc ->
+            let attacker, defender = cast (attacker, defender) spell in
+            let spell_cost = spell_cost spell in
+            let mana_spent = attacker.mana_spent + spell_cost in
+            if mana_spent > !smallest then acc
+            else
+              play ~hard defender
+                {
+                  attacker with
+                  mana_spent;
+                  current_mana = attacker.current_mana - spell_cost;
+                }
+              :: acc)
+          spells
+        |> List.filter ~f:(fun player -> player.id = "Player")
+        |> List.fold_left ~init:{ initial_player with mana_spent = max_int }
+             ~f:(fun acc player ->
+               if player.mana_spent < acc.mana_spent then player else acc)
+      else play ~hard { defender with armor = 0 } { attacker with armor = 0 }
 
 let play player boss =
-  play player boss |> fun { mana_spent; _ } -> Printf.printf "%d\n" mana_spent
+  play ~hard:false player boss
+  |> fun { mana_spent; _ } ->
+  Printf.printf "Part 1: %d\n" mana_spent;
+  smallest := max_int;
+  play ~hard:true player boss
+  |> fun { mana_spent; _ } -> Printf.printf "Part 2: %d\n" mana_spent
 
 let parse_boss =
   Seq.fold_left
