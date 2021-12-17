@@ -40,4 +40,9 @@ let () =
   |> make_first_group (package_sum / 3)
   |> Option.value ~default:[]
   |> qe
-  |> Printf.printf "%d\n"
+  |> Printf.printf "Part 1: %d\n";
+  packages
+  |> make_first_group (package_sum / 4)
+  |> Option.value ~default:[]
+  |> qe
+  |> Printf.printf "Part 2: %d\n"
